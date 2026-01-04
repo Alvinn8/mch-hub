@@ -1,4 +1,12 @@
-const URL_BASE = "http://backend:8080/api/repos/";
+const DEFAULT_MCH_HUB_API_BASE = "http://backend:8080/api";
+
+// The file-manager backend runs inside Docker. When developing with the mch-hub backend
+// on your host, set MCH_HUB_API_BASE to e.g. "http://host.docker.internal:8080/api".
+const MCH_HUB_API_BASE = (typeof process !== "undefined" && process.env && process.env.MCH_HUB_API_BASE)
+    ? process.env.MCH_HUB_API_BASE
+    : DEFAULT_MCH_HUB_API_BASE;
+
+const URL_BASE = `${MCH_HUB_API_BASE.replace(/\/$/, "")}/repos/`;
 
 function ensure200(response) {
     if (!response.ok) {

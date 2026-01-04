@@ -1,44 +1,53 @@
 # MCH Hub
 
-A Vue + Java (Spring Boot) hub for browsing MCH repositories (users, orgs, repos, commits). File viewer is intentionally left as an iframe placeholder; supply your own external file manager via environment.
+An application for managing and viewing [mch](https://github.com/Alvinn8/mch) repositories.
 
 ## Stack
-- Frontend: Vue 3, Vite, PrimeVue, Vue Router
-- Backend: Spring Boot 3, JPA, PostgreSQL
+- Frontend: Vue, Vite, PrimeVue, Vue Router
+- Backend: Spring Boot
 - Database: PostgreSQL
-- Container: Docker Compose
+- File Manager: [Alvinn8/ftp-client](https://github.com/Alvinn8/ftp-client)
 
-## Quick start
+## Quick start (all-in-docker)
 ```sh
-# from repo root
 docker-compose up --build
 ```
-Frontend available at http://localhost:5173 (served by nginx). Backend at http://localhost:8080.
+The application is available at http://localhost/
 
-### Environment knobs
-- Backend:
-  - `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`
-  - `FILE_VIEWER_BASE_URL` used when you add a real file viewer endpoint.
-- Frontend build args (set in docker-compose or your shell before `npm run build`):
-  - `VITE_API_BASE` (default `/api` in dev proxy)
-  - `VITE_FILE_VIEWER_BASE` (iframe src template)
+## Local development
+Run the **frontend and backend on your host**, but keep **Postgres + file-manager (frontend+backend)** in Docker.
 
-## API outline (read-only)
-- `GET /api/users` list users
-- `GET /api/users/{username}` user detail
-- `GET /api/users/{username}/repos` repos owned by user
-- `GET /api/orgs` list orgs
-- `GET /api/orgs/{slug}` org detail
-- `GET /api/orgs/{slug}/repos` repos owned by org
-- `GET /api/repos/users/{username}/{repo}` repo detail (user-owned)
-- `GET /api/repos/orgs/{slug}/{repo}` repo detail (org-owned)
-- `GET /api/repos/users/{username}/{repo}/commits` commits list
-- `GET /api/repos/orgs/{slug}/{repo}/commits` commits list
-- `GET /api/repos/users/{username}/{repo}/commits/{hash}` commit detail
-- `GET /api/repos/orgs/{slug}/{repo}/commits/{hash}` commit detail
+### 1) Start Docker-only dependencies
+Use the dedicated dev compose file:
 
-## Notes
-- Persistence model is minimal: users, orgs, repos, commits. Ownership allows user or org.
-- Integration with actual MCH repository content is left for later (replace placeholders in services/controllers and the iframe src in frontend).
-- Demo data auto-seeds on backend start if DB is empty.
-- File viewer: frontend embeds `VITE_FILE_VIEWER_BASE?repo={owner/repo}&hash={hash}`; swap URL format to match your external manager.
+```sh
+docker compose -f docker-compose.dev.yml up --build
+```
+
+This starts:
+- Postgres on `localhost:5432`
+- File-manager backend on `localhost:8081`
+- File-manager frontend on `localhost:9000`
+
+> macOS/Windows: `host.docker.internal` works by default.
+
+### 2) Run the backend on your host
+From `backend/`:
+
+```sh
+./gradlew bootRun
+```
+
+Backend runs on `http://localhost:8080` and connects to Postgres on `localhost:5432`.
+
+### 3) Run the frontend on your host
+From `frontend/`:
+
+```sh
+pnpm install
+pnpm dev
+```
+
+Frontend runs on `http://localhost:5173`.
+
+Vite proxies `/api/*` to the backend (default `http://localhost:8080`), so the browser doesn’t need CORS for API calls.

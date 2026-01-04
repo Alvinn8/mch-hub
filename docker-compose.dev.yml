@@ -1,0 +1,38 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: mchhub
+      POSTGRES_PASSWORD: mchhub
+      POSTGRES_DB: mchhub
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  file-manager-backend:
+    # image: ghcr.io/alvinn8/ftp-client-backend:latest
+    image: ftp-client-backend-local
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./file-manager/extensions/:/app/server/extensions/:ro
+    environment:
+      MCH_HUB_API_BASE: "http://host.docker.internal:8080/api"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  file-manager-frontend:
+    # image: ghcr.io/alvinn8/ftp-client-frontend:latest
+    image: ftp-client-frontend-local
+    ports:
+      - "9000:80"
+    volumes:
+      - ./file-manager/config.json:/usr/share/nginx/html/config.json:ro
+    depends_on:
+      - file-manager-backend
+
+volumes:
+  db_data:
+
