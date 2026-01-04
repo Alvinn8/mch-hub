@@ -1,0 +1,48 @@
+{
+    "websocket_url": "ws://localhost/file-manager/backend/",
+    "branding": {
+        "appName": "MCH Hub File Manager",
+        "title": "File Manager"
+    },
+    "useNewUiByDefault": true,
+    "protocols": {
+        "ftp": {
+            "enabled": false
+        },
+        "sftp": {
+            "enabled": false
+        },
+        "mch": {
+            "enabled": true,
+            "name": "mch",
+            "fields": [
+                {
+                    "name": "repository",
+                    "type": "string",
+                    "label": "Repository",
+                    "placeholder": "username/repo or organization/repo"
+                },
+                {
+                    "name": "commit",
+                    "type": "string",
+                    "label": "Commit",
+                    "placeholder": "commit hash"
+                },
+                {
+                    "name": "world",
+                    "type": "string",
+                    "label": "World",
+                    "placeholder": "world name or hash",
+                    "optional": true
+                },
+                {
+                    "name": "token",
+                    "type": "string",
+                    "label": "Access Token",
+                    "placeholder": "your access token",
+                    "optional": true
+                }
+            ]
+        }
+    }
+}
