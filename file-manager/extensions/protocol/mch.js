@@ -48,4 +48,18 @@ export default function setup({ handler, Packets, ServerPackets, FileType }) {
             .then(res => res.json())
             .then(res => ({ files: res }));
     });
+
+    handler(Packets.Download, async (packet, data, connection) => {
+        const commit = encodeURIComponent(connection.client.commit);
+        const path = encodeURIComponent(data.path);
+        return await fetch(connection.client.url + "download?commit=" + commit + "&path=" + path)
+            .then(ensure200)
+            .then(res => res.arrayBuffer())
+            .then(buffer => {
+                const base64 = Buffer.from(buffer).toString('base64');
+                return {
+                    data: base64
+                };
+            });
+    });
 }

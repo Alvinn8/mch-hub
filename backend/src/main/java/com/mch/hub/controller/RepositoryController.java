@@ -53,7 +53,7 @@ public class RepositoryController {
         @RequestParam String commit,
         @RequestParam String path,
         HttpServletResponse response
-    ) {
+    ) throws IOException {
         var repo = repositoryService.getBySlug(ownerSlug, repoSlug);
         repoFileService.downloadFile(repo, commit, path, response);
     }
