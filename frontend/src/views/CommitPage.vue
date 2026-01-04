@@ -13,8 +13,7 @@
     </div>
 
     <div class="mb-3">
-      <div class="text-500 mb-2">File viewer (placeholder)</div>
-      <div class="surface-ground border-round overflow-hidden" style="height: 480px">
+      <div class="surface-ground border-round overflow-hidden" style="height: calc(100vh - 300px);">
         <iframe
           v-if="fileViewerUrl"
           :src="fileViewerUrl"

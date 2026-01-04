@@ -5,6 +5,11 @@
         "title": "File Manager"
     },
     "useNewUiByDefault": true,
+    "themes": {
+        "dark": {
+            "bg-dark": "#0f1626"
+        }
+    },
     "protocols": {
         "ftp": {
             "enabled": false
