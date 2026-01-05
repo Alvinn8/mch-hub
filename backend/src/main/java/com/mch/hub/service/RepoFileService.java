@@ -1,6 +1,7 @@
 package com.mch.hub.service;
 
 import ca.bkaw.mch.Sha1;
+import ca.bkaw.mch.chunk.RegionFileChunk;
 import ca.bkaw.mch.object.ObjectStorageTypes;
 import ca.bkaw.mch.object.Reference20;
 import ca.bkaw.mch.object.blob.Blob;
@@ -9,7 +10,9 @@ import ca.bkaw.mch.object.dimension.Dimension;
 import ca.bkaw.mch.object.tree.Tree;
 import ca.bkaw.mch.object.world.World;
 import ca.bkaw.mch.object.worldcontainer.WorldContainer;
+import ca.bkaw.mch.region.MchRegionFile;
 import ca.bkaw.mch.region.RegionStorageVisitor;
+import ca.bkaw.mch.region.mc.McRegionFileWriter;
 import ca.bkaw.mch.repository.MchConfiguration;
 import ca.bkaw.mch.repository.MchRepository;
 import ca.bkaw.mch.repository.TrackedWorld;
@@ -23,6 +26,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -233,25 +237,22 @@ public class RepoFileService {
 
         // Check if it's a region file
         if (!parts.isEmpty() && parts.getFirst().equals("region")) {
-            if (true) {
-                throw new UnsupportedOperationException("Not implemented.");
-            }
             parts.removeFirst();
             if (parts.isEmpty()) {
-                throw new IOException("Cannot download region directory");
+                throw new IOException("ENOENT Cannot download region directory");
             }
             String regionFileName = parts.removeFirst();
             if (!parts.isEmpty()) {
-                throw new IOException("Invalid path for region file");
+                throw new IOException("ENOENT Invalid path for region file");
             }
 
             // Parse region coordinates from filename (format: r.x.z.mca)
             if (!regionFileName.startsWith("r.") || !regionFileName.endsWith(".mca")) {
-                throw new IOException("Invalid region file name format");
+                throw new IOException("ENOENT Invalid region file name format");
             }
             String[] regionParts = regionFileName.substring(2, regionFileName.length() - 4).split("\\.");
             if (regionParts.length != 2) {
-                throw new IOException("Invalid region file name format");
+                throw new IOException("ENOENT Invalid region file name format");
             }
             int regionX = Integer.parseInt(regionParts[0]);
             int regionZ = Integer.parseInt(regionParts[1]);
@@ -266,13 +267,38 @@ public class RepoFileService {
             }
 
             if (regionFileRef == null) {
-                throw new IOException("Region file not found: " + regionFileName);
+                throw new IOException("ENOENT Region file not found: " + regionFileName);
             }
 
-            // Read and write the region file
-            RegionStorageVisitor.visitReadOnly(repo, trackedWorld, dimensionKey, regionX, regionZ, (chunk) -> {
-            });
-            throw new UnsupportedOperationException("Not implemented.");
+            Path tempFile = Files.createTempFile(regionFileName, ".mca");
+
+            try (McRegionFileWriter regionFile = new McRegionFileWriter(tempFile)) {
+                int[] chunkVersionNumbers = MchRegionFile.read(
+                    repo, trackedWorld, dimensionKey,
+                    regionFileRef.getRegionX(), regionFileRef.getRegionZ(),
+                    regionFileRef.getVersionNumber()
+                );
+                RegionStorageVisitor.visitReadOnly(
+                    repo, trackedWorld, dimensionKey,
+                    regionFileRef.getRegionX(), regionFileRef.getRegionZ(),
+                    chunk -> {
+                        int chunkVersionNumber = chunkVersionNumbers[chunk.getIndex()];
+                        if (chunkVersionNumber != 0) {
+                            RegionFileChunk restoredChunk = chunk.restore(chunkVersionNumber);
+                            regionFile.writeChunk(restoredChunk.nbt(), restoredChunk.lastModified());
+                        }
+                    });
+            }
+
+            try (InputStream in = Files.newInputStream(tempFile)) {
+                response.setContentType("application/octet-stream");
+                response.setHeader("Content-Disposition", "attachment; filename=\"" + regionFileName + "\"");
+                try (OutputStream out = response.getOutputStream()) {
+                    in.transferTo(out);
+                }
+            } finally {
+                Files.deleteIfExists(tempFile);
+            }
         }
 
         // It's a miscellaneous file in a tree
