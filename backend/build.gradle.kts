@@ -24,6 +24,7 @@ repositories {
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-webmvc")
+	implementation("org.springframework.boot:spring-boot-starter-security")
 	implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
 	implementation("ca.bkaw.mch:mch:0.1.1")
 	runtimeOnly("org.postgresql:postgresql")

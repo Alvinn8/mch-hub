@@ -5,10 +5,8 @@ import ca.bkaw.mch.object.ObjectStorageTypes;
 import ca.bkaw.mch.object.Reference20;
 import ca.bkaw.mch.object.commit.Commit;
 import ca.bkaw.mch.repository.MchRepository;
-import com.mch.hub.domain.CommitEntity;
 import com.mch.hub.domain.RepositoryEntity;
 import com.mch.hub.dto.CommitDto;
-import com.mch.hub.repository.CommitRepository;
 
 import java.io.IOException;
 import java.nio.file.Path;

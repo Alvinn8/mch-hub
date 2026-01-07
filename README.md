@@ -50,4 +50,4 @@ pnpm dev
 
 Frontend runs on `http://localhost:5173`.
 
-Vite proxies `/api/*` to the backend (default `http://localhost:8080`), so the browser doesn’t need CORS for API calls.
+Vite proxies `/api/*` to the backend (default `http://localhost:8080`), so the browser doesn't need CORS for API calls.

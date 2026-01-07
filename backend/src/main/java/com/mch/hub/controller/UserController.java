@@ -34,6 +34,6 @@ public class UserController {
     @GetMapping("/{username}/repos")
     public List<RepositoryDto> listUserRepos(@PathVariable String username) {
         var user = userService.getEntityByUsername(username);
-        return repositoryService.findByUser(user);
+        return repositoryService.listByUser(user);
     }
 }

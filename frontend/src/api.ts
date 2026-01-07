@@ -1,11 +1,35 @@
 import axios, { type AxiosResponse } from 'axios';
-import type { Commit, EntityOwnerType, Organization, Repository, User } from './types';
+import type { Commit, Organization, Repository, User } from './types';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE || '/api'
 });
 
 type ApiResponse<T> = Promise<AxiosResponse<T>>;
+
+// In-memory repo password cache (do NOT persist)
+const repoPasswords = new Map<string, string>();
+
+export const getRepoPassword = (repoPath: string): string | undefined => {
+  return repoPasswords.get(repoPath);
+}
+
+export const setRepoPassword = (repoPath: string, password: string) => {
+  if (!repoPath) return;
+  if (password) {
+    repoPasswords.set(repoPath, password);
+  } else {
+    repoPasswords.delete(repoPath);
+  }
+};
+
+const getAuthHeader = (repoPath: string) => {
+  const pwd = repoPasswords.get(repoPath);
+  if (!pwd) return undefined;
+  // Basic auth: username is repoPath (owner/repo), password is repo password
+  const token = btoa(`${repoPath}:${pwd}`);
+  return { Authorization: `Basic ${token}` };
+};
 
 export const fetchUsers = (): ApiResponse<User[]> => api.get('/users');
 export const fetchOrgs = (): ApiResponse<Organization[]> => api.get('/orgs');
@@ -15,18 +39,24 @@ export const fetchUserRepos = (username: string): ApiResponse<Repository[]> =>
   api.get(`/users/${username}/repos`);
 export const fetchOrgRepos = (slug: string): ApiResponse<Repository[]> => api.get(`/orgs/${slug}/repos`);
 export const fetchRepo = (
-  ownerType: EntityOwnerType,
   owner: string,
   repo: string
-): ApiResponse<Repository> => api.get(`/repos/${ownerType}/${owner}/${repo}`);
+): ApiResponse<Repository> => {
+  const repoPath = `${owner}/${repo}`;
+  return api.get(`/repos/${owner}/${repo}`, { headers: getAuthHeader(repoPath) });
+};
 export const fetchCommits = (
-  ownerType: EntityOwnerType,
   owner: string,
   repo: string
-): ApiResponse<Commit[]> => api.get(`/repos/${ownerType}/${owner}/${repo}/commits`);
+): ApiResponse<Commit[]> => {
+  const repoPath = `${owner}/${repo}`;
+  return api.get(`/repos/${owner}/${repo}/commits`, { headers: getAuthHeader(repoPath) });
+};
 export const fetchCommit = (
-  ownerType: EntityOwnerType,
   owner: string,
   repo: string,
   hash: string
-): ApiResponse<Commit> => api.get(`/repos/${ownerType}/${owner}/${repo}/commits/${hash}`);
+): ApiResponse<Commit> => {
+  const repoPath = `${owner}/${repo}`;
+  return api.get(`/repos/${owner}/${repo}/commits/${hash}`, { headers: getAuthHeader(repoPath) });
+};

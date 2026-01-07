@@ -17,9 +17,15 @@ function ensure200(response) {
 
 export default function setup({ handler, Packets, ServerPackets, FileType }) {
     handler(Packets.Connect, async (packet, data, connection) => {
+        let authorization = undefined;
+        if (data.password) {
+            const passwordBase64 = Buffer.from(`${data.repository}:${data.password}`, 'utf-8').toString('base64');
+            authorization = `Basic ${passwordBase64}`;
+        }
         connection.client = {
             url: `${URL_BASE}${data.repository}/files/`,
             commit: data.commit,
+            authorization: authorization,
         };
 
         return {
@@ -43,7 +49,8 @@ export default function setup({ handler, Packets, ServerPackets, FileType }) {
     handler(Packets.List, async (packet, data, connection) => {
         const commit = encodeURIComponent(connection.client.commit);
         const path = encodeURIComponent(data.path);
-        return await fetch(connection.client.url + "list?commit=" + commit + "&path=" + path)
+        const headers = { authorization: connection.client.authorization };
+        return await fetch(connection.client.url + "list?commit=" + commit + "&path=" + path, { headers })
             .then(ensure200)
             .then(res => res.json())
             .then(res => ({ files: res }));
@@ -52,7 +59,8 @@ export default function setup({ handler, Packets, ServerPackets, FileType }) {
     handler(Packets.Download, async (packet, data, connection) => {
         const commit = encodeURIComponent(connection.client.commit);
         const path = encodeURIComponent(data.path);
-        return await fetch(connection.client.url + "download?commit=" + commit + "&path=" + path)
+        const headers = { authorization: connection.client.authorization };
+        return await fetch(connection.client.url + "download?commit=" + commit + "&path=" + path, { headers })
             .then(ensure200)
             .then(res => res.arrayBuffer())
             .then(buffer => {

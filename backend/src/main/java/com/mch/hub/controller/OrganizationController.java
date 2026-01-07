@@ -34,6 +34,6 @@ public class OrganizationController {
     @GetMapping("/{slug}/repos")
     public List<RepositoryDto> listOrganizationRepos(@PathVariable String slug) {
         var org = organizationService.getEntityBySlug(slug);
-        return repositoryService.findByOrganization(org);
+        return repositoryService.listByOrganization(org);
     }
 }

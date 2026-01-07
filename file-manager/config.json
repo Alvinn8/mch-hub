@@ -41,10 +41,10 @@
                     "optional": true
                 },
                 {
-                    "name": "token",
-                    "type": "string",
-                    "label": "Access Token",
-                    "placeholder": "your access token",
+                    "name": "password",
+                    "type": "password",
+                    "label": "Password",
+                    "placeholder": "repository password",
                     "optional": true
                 }
             ]

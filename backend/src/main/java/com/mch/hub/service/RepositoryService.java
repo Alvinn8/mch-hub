@@ -3,11 +3,13 @@ package com.mch.hub.service;
 import com.mch.hub.domain.OrganizationEntity;
 import com.mch.hub.domain.RepositoryEntity;
 import com.mch.hub.domain.UserEntity;
+import com.mch.hub.domain.Visibility;
 import com.mch.hub.dto.RepositoryDto;
 import com.mch.hub.repository.OrganizationRepository;
 import com.mch.hub.repository.RepositoryRepository;
 import com.mch.hub.repository.UserRepository;
 import java.util.List;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -15,39 +17,34 @@ public class RepositoryService {
     private final RepositoryRepository repositoryRepository;
     private final UserRepository userRepository;
     private final OrganizationRepository organizationRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public RepositoryService(
         RepositoryRepository repositoryRepository,
         UserRepository userRepository,
-        OrganizationRepository organizationRepository
+        OrganizationRepository organizationRepository,
+        PasswordEncoder passwordEncoder
     ) {
         this.repositoryRepository = repositoryRepository;
         this.userRepository = userRepository;
         this.organizationRepository = organizationRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
-    public List<RepositoryDto> findByUser(UserEntity owner) {
+    public List<RepositoryDto> listByUser(UserEntity owner) {
         return repositoryRepository.findByOwnerUser(owner).stream()
+            .filter(repo -> repo.getVisibility() == Visibility.PUBLIC ||
+                           repo.getVisibility() == Visibility.PUBLIC_PASSWORD)
             .map(RepositoryService::toDto)
             .toList();
     }
 
-    public List<RepositoryDto> findByOrganization(OrganizationEntity owner) {
+    public List<RepositoryDto> listByOrganization(OrganizationEntity owner) {
         return repositoryRepository.findByOwnerOrganization(owner).stream()
+            .filter(repo -> repo.getVisibility() == Visibility.PUBLIC ||
+                           repo.getVisibility() == Visibility.PUBLIC_PASSWORD)
             .map(RepositoryService::toDto)
             .toList();
-    }
-
-    public RepositoryDto getByUserAndName(String username, String repoName) {
-        RepositoryEntity repo = repositoryRepository.findByOwnerUserUsernameIgnoreCaseAndNameIgnoreCase(username, repoName)
-            .orElseThrow(() -> new ResourceNotFoundException("Repository not found"));
-        return toDto(repo);
-    }
-
-    public RepositoryDto getByOrganizationAndName(String slug, String repoName) {
-        RepositoryEntity repo = repositoryRepository.findByOwnerOrganizationSlugIgnoreCaseAndNameIgnoreCase(slug, repoName)
-            .orElseThrow(() -> new ResourceNotFoundException("Repository not found"));
-        return toDto(repo);
     }
 
     public RepositoryEntity getEntityByUserAndName(String username, String repoName) {
@@ -105,6 +102,26 @@ public class RepositoryService {
         throw new ResourceNotFoundException("Owner not found");
     }
 
+    /**
+     * Verify if the provided password matches the repository's password.
+     *
+     * @param repository The repository to verify against
+     * @param password The password to verify
+     * @return true if the password is correct, false otherwise
+     */
+    public boolean verifyPassword(RepositoryEntity repository, String password) {
+        if (repository.getPasswordHash() == null) {
+            return false;
+        }
+        return passwordEncoder.matches(password, repository.getPasswordHash());
+    }
+
+    public void setPassword(RepositoryEntity repo, String password) {
+        String hashed = this.passwordEncoder.encode(password);
+        repo.setPasswordHash(hashed);
+        repositoryRepository.save(repo);
+    }
+
     public static RepositoryDto toDto(RepositoryEntity entity) {
         String ownerType;
         String ownerName;
@@ -118,6 +135,15 @@ public class RepositoryService {
             ownerType = "unknown";
             ownerName = "";
         }
-        return new RepositoryDto(entity.getId(), entity.getName(), entity.getDescription(), ownerType, ownerName, entity.getStoragePath(), entity.getCreatedAt());
+        return new RepositoryDto(
+            entity.getId(),
+            entity.getName(),
+            entity.getDescription(),
+            ownerType,
+            ownerName,
+            entity.getStoragePath(),
+            entity.getCreatedAt(),
+            entity.getVisibility()
+        );
     }
 }

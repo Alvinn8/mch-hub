@@ -9,8 +9,8 @@ const routes: RouteRecordRaw[] = [
   { path: '/', name: 'home', component: HomePage },
   { path: '/users/:username', name: 'user', component: UserReposPage, props: true },
   { path: '/orgs/:slug', name: 'org', component: OrgReposPage, props: true },
-  { path: '/:ownerType/:owner/:repo', name: 'repo', component: RepoPage, props: true },
-  { path: '/:ownerType/:owner/:repo/commit/:hash', name: 'commit', component: CommitPage, props: true }
+  { path: '/:owner/:repo', name: 'repo', component: RepoPage, props: true },
+  { path: '/:owner/:repo/commit/:hash', name: 'commit', component: CommitPage, props: true }
 ];
 
 const router = createRouter({

@@ -2,10 +2,7 @@
   <div class="grid">
     <Card v-for="repo in repos" :key="repo.id" class="m-3">
       <template #header>
-        <router-link
-          :to="`/${repo.ownerType === 'user' ? 'users' : 'orgs'}/${repo.ownerName}/${repo.name}`"
-          class="text-xl font-bold no-underline"
-        >
+        <router-link :to="`/${repo.ownerName}/${repo.name}`" class="text-xl font-bold no-underline">
           <span class="mr-3"> {{ repo.ownerName }}/{{ repo.name }} </span>
           <Button icon="pi pi-arrow-right" />
         </router-link>

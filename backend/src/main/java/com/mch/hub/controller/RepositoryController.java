@@ -7,6 +7,7 @@ import com.mch.hub.service.RepositoryService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,14 +26,19 @@ public class RepositoryController {
         this.repoFileService = repoFileService;
     }
 
-    @GetMapping("/users/{username}/{repo}")
-    public RepositoryDto getUserRepo(@PathVariable String username, @PathVariable("repo") String repoName) {
-        return repositoryService.getByUserAndName(username, repoName);
+    @GetMapping("/{ownerSlug}/{repoSlug}")
+    public RepositoryDto getUserRepo(@PathVariable String ownerSlug, @PathVariable String repoSlug) {
+        return RepositoryService.toDto(repositoryService.getBySlug(ownerSlug, repoSlug));
     }
 
-    @GetMapping("/orgs/{slug}/{repo}")
-    public RepositoryDto getOrgRepo(@PathVariable String slug, @PathVariable("repo") String repoName) {
-        return repositoryService.getByOrganizationAndName(slug, repoName);
+    @PostMapping("/{ownerSlug}/{repoSlug}/set-password")
+    public void setRepositoryPassword(
+        @PathVariable String ownerSlug,
+        @PathVariable String repoSlug,
+        @RequestParam String password
+    ) {
+        var repo = repositoryService.getBySlug(ownerSlug, repoSlug);
+        repositoryService.setPassword(repo, password);
     }
 
     @GetMapping("/{ownerSlug}/{repoSlug}/files/list")

@@ -17,12 +17,11 @@
 
 <script setup lang="ts">
 import { DateTime } from 'luxon';
-import type { Commit, EntityOwnerType } from '../types';
+import type { Commit } from '../types';
 import Button from 'primevue/button';
 
 const props = defineProps<{
   commits: Commit[];
-  ownerType: EntityOwnerType;
   owner: string;
   repo: string;
 }>();
@@ -32,6 +31,5 @@ const formatDate = (value?: string) => {
   return DateTime.fromISO(value).toLocaleString(DateTime.DATETIME_MED);
 };
 
-const commitLink = (commit: Commit) =>
-  `/${props.ownerType}/${props.owner}/${props.repo}/commit/${commit.hash}`;
+const commitLink = (commit: Commit) => `/${props.owner}/${props.repo}/commit/${commit.hash}`;
 </script>

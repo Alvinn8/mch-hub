@@ -1,4 +1,3 @@
-export type EntityOwnerType = 'users' | 'orgs';
 export type RepoOwnerType = 'user' | 'org';
 
 export interface User {

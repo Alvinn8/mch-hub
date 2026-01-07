@@ -1,24 +1,28 @@
 package com.mch.hub.config;
 
-import com.mch.hub.domain.CommitEntity;
 import com.mch.hub.domain.OrganizationEntity;
 import com.mch.hub.domain.RepositoryEntity;
 import com.mch.hub.domain.UserEntity;
-import com.mch.hub.repository.CommitRepository;
+import com.mch.hub.domain.Visibility;
 import com.mch.hub.repository.OrganizationRepository;
 import com.mch.hub.repository.RepositoryRepository;
 import com.mch.hub.repository.UserRepository;
-import java.time.OffsetDateTime;
-import java.util.List;
+
 import java.util.Set;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration
 public class DemoDataLoader {
     @Bean
-    CommandLineRunner seedData(UserRepository users, OrganizationRepository orgs, RepositoryRepository repos, CommitRepository commits) {
+    CommandLineRunner seedData(
+        UserRepository users,
+        OrganizationRepository orgs,
+        RepositoryRepository repos,
+        PasswordEncoder passwordEncoder
+    ) {
         return args -> {
             if (!users.findAll().isEmpty()) {
                 return;
@@ -48,6 +52,8 @@ public class DemoDataLoader {
             soloRepo.setDescription("Alice's personal history of her base.");
             soloRepo.setOwnerUser(alice);
             soloRepo.setStoragePath("/data/repos/alice/solo-world");
+            soloRepo.setVisibility(Visibility.PUBLIC_PASSWORD);
+            soloRepo.setPasswordHash(passwordEncoder.encode("secret123"));
             repos.save(soloRepo);
 
             RepositoryEntity guildRepo = new RepositoryEntity();
@@ -55,19 +61,8 @@ public class DemoDataLoader {
             guildRepo.setDescription("Shared guild hall world timeline.");
             guildRepo.setOwnerOrganization(builders);
             guildRepo.setStoragePath("/data/repos/builders-guild/guild-hall");
+            guildRepo.setVisibility(Visibility.PUBLIC);
             repos.save(guildRepo);
-
-            List<RepositoryEntity> targets = List.of(soloRepo, guildRepo);
-            for (RepositoryEntity r : targets) {
-                for (int i = 0; i < 3; i++) {
-                    CommitEntity c = new CommitEntity();
-                    c.setRepository(r);
-                    c.setHash(r.getName().substring(0, Math.min(4, r.getName().length())) + "-" + (i + 1));
-                    c.setMessage("Snapshot " + (i + 1));
-                    c.setCommittedAt(OffsetDateTime.now().minusDays(2 - i));
-                    commits.save(c);
-                }
-            }
         };
     }
 }

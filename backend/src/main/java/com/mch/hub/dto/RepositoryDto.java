@@ -1,5 +1,7 @@
 package com.mch.hub.dto;
 
+import com.mch.hub.domain.Visibility;
+
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -10,5 +12,6 @@ public record RepositoryDto(
     String ownerType,
     String ownerName,
     String storagePath,
-    OffsetDateTime createdAt
+    OffsetDateTime createdAt,
+    Visibility visibility
 ) {}
