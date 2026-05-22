@@ -21,7 +21,7 @@ import org.springframework.stereotype.Service;
 public class CommitService {
 
     public List<CommitDto> listCommits(RepositoryEntity repoEntity) throws IOException {
-        MchRepository repo = new MchRepository(Path.of(repoEntity.getStoragePath()));
+        MchRepository repo = MchRepository.of(Path.of(repoEntity.getStoragePath()));
         List<CommitDto> commits = new ArrayList<>();
         Reference20<Commit> ref = repo.getHeadCommit();
         while (ref != null) {
@@ -33,7 +33,7 @@ public class CommitService {
     }
 
     public CommitDto getCommit(RepositoryEntity repoEntity, String hash) throws IOException {
-        MchRepository repo = new MchRepository(Path.of(repoEntity.getStoragePath()));
+        MchRepository repo = MchRepository.of(Path.of(repoEntity.getStoragePath()));
         Sha1 sha1 = Sha1.fromString(hash);
         Commit commit = ObjectStorageTypes.COMMIT.read(sha1, repo);
         return toDto(sha1, commit);

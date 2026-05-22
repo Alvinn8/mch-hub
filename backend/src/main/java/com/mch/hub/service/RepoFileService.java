@@ -30,14 +30,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class RepoFileService {
     public List<FileInfoDto> listFiles(RepositoryEntity repoEntity, String commitHash, String path) throws IOException {
         Sha1 commitSha1 = Sha1.fromString(commitHash);
-        MchRepository repo = new MchRepository(Path.of(repoEntity.getStoragePath()));
+        MchRepository repo = MchRepository.of(Path.of(repoEntity.getStoragePath()));
         repo.readConfiguration();
         Commit commit = ObjectStorageTypes.COMMIT.read(commitSha1, repo);
         if (path.startsWith("/")) {
@@ -61,7 +63,48 @@ public class RepoFileService {
             parts.removeFirst();
             return this.dimension(world.getDimension(Dimension.THE_END), repo, parts);
         } else if (parts.getFirst().equals("dimensions")) {
-            return List.of(); // TODO
+            // TODO this is wrong for classic worlds
+            parts.removeFirst();
+            if (parts.isEmpty()) {
+                // List dimension namespaces
+                Set<String> namespaces = new HashSet<>();
+                for (String dimensionKey : world.getDimensions().keySet()) {
+                    String namespace = dimensionKey.split(":")[0];
+                    namespaces.add(namespace);
+                }
+                return namespaces.stream()
+                    .map(namespace -> new FileInfoDto(namespace, -1, FileInfoDto.FileType.DIRECTORY, ""))
+                    .toList();
+            } else if (parts.size() == 1) {
+                // List dimension paths
+                List<FileInfoDto> files = new ArrayList<>();
+                for (Map.Entry<String, Reference20<Dimension>> entry : world.getDimensions().entrySet()) {
+                    String dimensionKey = entry.getKey();
+                    String namespace = dimensionKey.split(":")[0];
+                    if (namespace.equals(parts.getFirst())) {
+                        String pathPart = dimensionKey.substring(namespace.length() + 1);
+                        files.add(new FileInfoDto(pathPart, -1, FileInfoDto.FileType.DIRECTORY, ""));
+                    }
+                }
+                return files;
+            } else {
+                // Navigate to dimension
+                String namespace = parts.removeFirst();
+                String pathPart = parts.removeFirst();
+                String dimensionKey = namespace + ":" + pathPart;
+                Reference20<Dimension> dimensionRef = world.getDimensions().get(dimensionKey);
+                if (dimensionRef == null) {
+                    throw new IOException("ENOENT Dimension not found: " + dimensionKey);
+                }
+                return this.dimension(dimensionRef, repo, parts);
+            }
+        } else if (world.getLayout() == World.Layout.DIMENSIONS) {
+            Reference20<Tree> miscFilesRef = world.getMiscellaneousFiles();
+            if (miscFilesRef == null) {
+                throw new IOException("ENOENT No miscellaneous files found for world");
+            }
+            Tree miscFiles = miscFilesRef.resolve(repo);
+            return this.traverseTree(miscFiles, repo, parts);
         } else {
             return this.dimension(world.getDimension(Dimension.OVERWORLD), repo, parts);
         }
@@ -126,6 +169,18 @@ public class RepoFileService {
     }
 
     private List<FileInfoDto> worldDirectory(World world, MchRepository repo) throws IOException {
+        if (world.getLayout() == World.Layout.DIMENSIONS) {
+            List<FileInfoDto> files = new ArrayList<>();
+			if (!world.getDimensions().isEmpty()) {
+				files.add(new FileInfoDto("dimensions", -1, FileInfoDto.FileType.DIRECTORY, ""));
+			}
+            Reference20<Tree> miscFilesRef = world.getMiscellaneousFiles();
+			if (miscFilesRef != null) {
+				Tree miscFiles = miscFilesRef.resolve(repo);
+                this.addFileTree(files, miscFiles);
+            }
+            return files;
+        }
         List<FileInfoDto> files = new ArrayList<>();
         if (world.getDimensions().containsKey(Dimension.NETHER)) {
             files.add(new FileInfoDto(Util.NETHER_FOLDER, -1, FileInfoDto.FileType.DIRECTORY, ""));
@@ -187,7 +242,7 @@ public class RepoFileService {
 
     public void downloadFile(RepositoryEntity repoEntity, String commitHash, String path, HttpServletResponse response) throws IOException {
         Sha1 commitSha1 = Sha1.fromString(commitHash);
-        MchRepository repo = new MchRepository(Path.of(repoEntity.getStoragePath()));
+        MchRepository repo = MchRepository.of(Path.of(repoEntity.getStoragePath()));
         repo.readConfiguration();
         Commit commit = ObjectStorageTypes.COMMIT.read(commitSha1, repo);
 
@@ -216,19 +271,48 @@ public class RepoFileService {
 
         // Navigate to the correct dimension
         String dimensionKey;
-        Reference20<Dimension> dimensionRef;
-        if (parts.getFirst().equals(Util.NETHER_FOLDER)) {
-            parts.removeFirst();
-            dimensionKey = Dimension.NETHER;
-        } else if (parts.getFirst().equals(Util.THE_END_FOLDER)) {
-            parts.removeFirst();
-            dimensionKey = Dimension.THE_END;
-        } else if (parts.getFirst().equals("dimensions")) {
-            throw new IOException("Custom dimensions not yet supported");
+        if (world.getLayout() == World.Layout.DIMENSIONS || parts.getFirst().equals("dimensions")) {
+            if (parts.getFirst().equals("dimensions")) {
+                parts.removeFirst();
+                if (parts.size() < 2) {
+                    throw new IOException("ENOENT Cannot download dimensions directory");
+                }
+                String dimensionNamespace = parts.removeFirst();
+                String dimensionPath = parts.removeFirst();
+                dimensionKey = dimensionNamespace + ":" + dimensionPath;
+            } else {
+                // Misc files in the world root
+                Reference20<Tree> miscFilesRef = world.getMiscellaneousFiles();
+                if (miscFilesRef == null) {
+                    // Should never happen for a world with DIMENSIONS layout
+                    throw new IOException("ENOENT No miscellaneous files found for world");
+                }
+                Tree miscFiles = miscFilesRef.resolve(repo);
+                Tree.BlobReference blobRef = findFileInTree(miscFiles, repo, parts);
+                if (blobRef == null) {
+                    throw new IOException("ENOENT File not found: " + path);
+                }
+                Blob blob = blobRef.reference().resolve(repo);
+                response.setContentType("application/octet-stream");
+                response.setHeader("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
+                try (InputStream in = new ByteArrayInputStream(blob.getBytes());
+                        OutputStream out = response.getOutputStream()) {
+                    in.transferTo(out);
+                }
+                return;
+            }
         } else {
-            dimensionKey = Dimension.OVERWORLD;
+            if (parts.getFirst().equals(Util.NETHER_FOLDER)) {
+                parts.removeFirst();
+                dimensionKey = Dimension.NETHER;
+            } else if (parts.getFirst().equals(Util.THE_END_FOLDER)) {
+                parts.removeFirst();
+                dimensionKey = Dimension.THE_END;
+            } else {
+                dimensionKey = Dimension.OVERWORLD;
+            }
         }
-        dimensionRef = world.getDimension(dimensionKey);
+        Reference20<Dimension> dimensionRef = world.getDimension(dimensionKey);
         if (dimensionRef == null) {
             throw new IOException("Dimension not found: " + dimensionKey);
         }
@@ -326,7 +410,7 @@ public class RepoFileService {
 
     private Tree.BlobReference findFileInTree(Tree tree, MchRepository repo, List<String> path) throws IOException {
         if (path.isEmpty()) {
-            throw new IOException("Path points to a directory, not a file");
+            throw new IOException("EISDIR Path points to a directory, not a file");
         }
 
         if (path.size() == 1) {
@@ -338,7 +422,7 @@ public class RepoFileService {
         String nextDir = path.removeFirst();
         Reference20<Tree> subTreeRef = tree.getSubTrees().get(nextDir);
         if (subTreeRef == null) {
-            throw new IOException("Directory not found: " + nextDir);
+            throw new IOException("ENOENT Directory not found: " + nextDir);
         }
         Tree subTree = subTreeRef.resolve(repo);
         return this.findFileInTree(subTree, repo, path);
