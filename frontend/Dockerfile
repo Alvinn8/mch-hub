@@ -1,10 +1,10 @@
-FROM node:20-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /app
 ARG VITE_API_BASE
 ARG VITE_FILE_VIEWER_BASE
 ENV VITE_API_BASE=${VITE_API_BASE}
 ENV VITE_FILE_VIEWER_BASE=${VITE_FILE_VIEWER_BASE}
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@10.12.1 --activate
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY . .
