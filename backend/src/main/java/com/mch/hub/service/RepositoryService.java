@@ -8,6 +8,8 @@ import com.mch.hub.dto.RepositoryDto;
 import com.mch.hub.repository.OrganizationRepository;
 import com.mch.hub.repository.RepositoryRepository;
 import com.mch.hub.repository.UserRepository;
+
+import java.util.Comparator;
 import java.util.List;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -36,6 +38,7 @@ public class RepositoryService {
             .filter(repo -> repo.getVisibility() == Visibility.PUBLIC ||
                            repo.getVisibility() == Visibility.PUBLIC_PASSWORD)
             .map(RepositoryService::toDto)
+            .sorted(Comparator.comparing(RepositoryDto::createdAt))
             .toList();
     }
 
@@ -44,6 +47,7 @@ public class RepositoryService {
             .filter(repo -> repo.getVisibility() == Visibility.PUBLIC ||
                            repo.getVisibility() == Visibility.PUBLIC_PASSWORD)
             .map(RepositoryService::toDto)
+            .sorted(Comparator.comparing(RepositoryDto::createdAt))
             .toList();
     }
 
