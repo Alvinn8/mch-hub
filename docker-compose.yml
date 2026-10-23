@@ -33,15 +33,15 @@ services:
     ports:
       - "5173:80"
   file-manager-backend:
-    #image: ghcr.io/alvinn8/ftp-client-backend:latest
-    image: ftp-client-backend-local
+    image: ghcr.io/alvinn8/ftp-client-backend:latest
+    #image: ftp-client-backend-local
     ports:
       - "8081:8081"
     volumes:
       - ./file-manager/extensions/:/app/server/extensions/:ro
   file-manager-frontend:
-    #image: ghcr.io/alvinn8/ftp-client-frontend:latest
-    image: ftp-client-frontend-local
+    image: ghcr.io/alvinn8/ftp-client-frontend:latest
+    #image: ftp-client-frontend-local
     ports:
       - "9000:80"
     volumes:
